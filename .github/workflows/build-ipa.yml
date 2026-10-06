@@ -1,0 +1,49 @@
+name: Build native Liquid Glass IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      visual_check:
+        description: Capture native iOS simulator screens
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reviewnfcgo-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify native SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          test -d "$DEVELOPER_DIR"
+      - name: Configure Places
+        env:
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: python3 scripts/configure.py
+      - name: Verify scheduling
+        run: sh Tests/run.sh
+      - name: Build iPhone IPA with Live Activity
+        run: bash scripts/build-ipa.sh
+      - name: Review native UI
+        if: ${{ inputs.visual_check }}
+        run: bash scripts/capture-ui.sh
+      - name: Upload IPA and UI review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reviewNfcGo-native-LiquidGlass
+          path: output/
+          if-no-files-found: error
+          retention-days: 7

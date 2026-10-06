@@ -1,0 +1,8 @@
+reviewNfcGo/LocalConfig.swift
+DerivedData/
+build/
+output/
+*.ipa
+*.xcuserstate
+xcuserdata/
+.DS_Store

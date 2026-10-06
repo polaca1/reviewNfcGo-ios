@@ -1,0 +1,45 @@
+reviewNfcGo 2.9 — Liquid Glass nativo (build 10)
+
+REQUISITOS
+Xcode 26.2 o posterior. iPhone con iOS 26 o posterior (incluido iOS 27).
+Xcode 16 no incluye las APIs necesarias para compilar esta versión.
+
+INTERFAZ
+Navegación, barra de pestañas, selectores y formularios del sistema.
+Botones glass y glassProminent, GlassEffectContainer y glassEffect de SwiftUI.
+Sin imitaciones con desenfoque. Modo oscuro y accesibilidad del sistema.
+Acceso, mapa, sitios, ficha, edición, ganancias, avisos y perfil rediseñados.
+
+DATOS Y FUNCIONES
+Se mantienen los identificadores, las claves de almacenamiento y la lógica
+NFC, de avisos y de Live Activity. No borres la app anterior si deseas
+conservar sus datos y utiliza el mismo equipo de firma al actualizar.
+
+COMPILACIÓN LOCAL
+Abre reviewNfcGo.xcodeproj con Xcode 26.2 o posterior.
+El ZIP local incluye LocalConfig.swift con la configuración existente.
+Para instalar desde Xcode, selecciona tu equipo en ambos targets.
+Para crear el IPA sin firma destinado a SideStore:
+  bash scripts/build-ipa.sh
+Resultado: output/reviewNfcGo-2.9-Native-LiquidGlass.ipa.
+
+GITHUB ACTIONS
+El repositorio no incluye LocalConfig.swift ni la clave de Google Places.
+El secreto GOOGLE_PLACES_API_KEY genera ese archivo durante la compilación.
+Ejecuta Build native Liquid Glass IPA desde Actions. Compila Release para
+iPhone e incluye la extensión. La opción de revisión visual genera capturas
+del simulador en modo claro y oscuro. Los datos de ejemplo están excluidos
+de la compilación Release. Las 46 comprobaciones existentes se ejecutan antes.
+
+SIDESTORE
+Guarda el IPA en Archivos e impórtalo desde My Apps > +.
+Conserva la extensión: Keep App Extensions (Register App ID for Each Extension).
+SideStore firma el paquete con tu cuenta. El IPA no contiene certificados
+ni perfiles personales.
+
+LIVE ACTIVITY
+Se conserva la lógica de la versión 2.8. Una notificación local recibida con
+la app cerrada no ejecuta código para iniciar la actividad. Al volver a la
+app o tocar el aviso dentro de las cinco horas previas se intenta iniciarla.
+Los permisos y límites del sistema siguen aplicándose. No se modifica el
+temporizador de primer plano ni la limpieza de actividades.
