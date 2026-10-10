@@ -1,6 +1,8 @@
 name: HackMonitor
 options:
   bundleIdPrefix: com.polaca1
+  projectFormat: xcode15_3
+  xcodeVersion: '15.4'
   deploymentTarget:
     iOS: "12.0"
 targets:
