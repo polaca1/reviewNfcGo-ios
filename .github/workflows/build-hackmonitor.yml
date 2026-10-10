@@ -1,0 +1,55 @@
+name: Build HackMonitor iOS 12
+on:
+  push:
+    branches:
+      - hackmonitor-ipad-ios12
+    paths:
+      - 'HackMonitor/**'
+      - '.github/workflows/build-hackmonitor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+      - name: Use Xcode 15.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          xcodebuild -version
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: |
+          cd HackMonitor
+          xcodegen generate
+      - name: Compile unsigned iOS 12 app
+        run: |
+          xcodebuild \
+            -project HackMonitor/HackMonitor.xcodeproj \
+            -scheme HackMonitor \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$GITHUB_WORKSPACE/build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package unsigned IPA
+        run: |
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/HackMonitor.app Payload/
+          /usr/libexec/PlistBuddy -c 'Print MinimumOSVersion' Payload/HackMonitor.app/Info.plist
+          zip -qry HackMonitor-iOS12-unsigned.ipa Payload
+      - name: Publish build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HackMonitor-iOS12-unsigned
+          path: HackMonitor-iOS12-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
