@@ -1,0 +1,22 @@
+name: ReviewLab
+options:
+  bundleIdPrefix: io.github.polaca1
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    SWIFT_VERSION: "5.0"
+targets:
+  ReviewLab:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.polaca1.reviewlab
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Comprobar el permiso de ubicación durante las pruebas."
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
+        CODE_SIGNING_ALLOWED: NO
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
