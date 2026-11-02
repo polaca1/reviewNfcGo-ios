@@ -1,0 +1,36 @@
+name: "ReviewNFC Go - laboratorio IPA"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "experiments/ios-lab/**"
+      - ".github/workflows/ios-lab.yml"
+jobs:
+  ios-lab:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar XcodeGen
+        run: |
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          xcodebuild -version
+      - name: Generar proyecto
+        run: |
+          cd experiments/ios-lab
+          xcodegen generate
+      - name: Compilar para iPhone sin firma
+        run: |
+          set -o pipefail
+          xcodebuild -project experiments/ios-lab/ReviewLab.xcodeproj -scheme ReviewLab -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build
+      - name: Empaquetar IPA sin firmar
+        run: |
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/ReviewLab.app" "$RUNNER_TEMP/Payload/"
+          cd "$RUNNER_TEMP"
+          zip -qry "$GITHUB_WORKSPACE/ReviewLab-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ReviewLab-unsigned-ipa
+          path: ReviewLab-unsigned.ipa
+          retention-days: 14
