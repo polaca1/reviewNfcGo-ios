@@ -1,0 +1,49 @@
+name: Day + SwiftUI real integration
+on:
+  workflow_dispatch:
+jobs:
+  build-day:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+      - name: Install Day CLI
+        run: cargo install day-cli --locked
+      - name: Create real Day app
+        run: day new app DayLab --title "ReviewNFC Day Lab" --no-input
+      - name: Install native SwiftUI package
+        run: |
+          mkdir -p DayLab/swiftui
+          cp -R experiments/day-lab/swiftui/. DayLab/swiftui/
+          cd DayLab
+          cargo add day-piece-swiftui
+          cd ..
+          python3 experiments/day-lab/patch.py
+      - name: Validate Day and build iOS
+        run: |
+          cd DayLab
+          day doctor --toolkit uikit
+          day build -t ios-uikit
+      - name: Collect build outputs
+        if: always()
+        run: |
+          mkdir -p output
+          find DayLab -name '*.app' -type d -maxdepth 12 -print > output/app-paths.txt || true
+          while IFS= read -r app; do
+            if [ -d "$app" ]; then
+              mkdir -p output/Payload
+              cp -R "$app" output/Payload/
+              (cd output && zip -qry DayLab-unsigned.ipa Payload)
+              rm -rf output/Payload
+              break
+            fi
+          done < output/app-paths.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: day-swiftui-build-results
+          path: output/
+          if-no-files-found: warn
