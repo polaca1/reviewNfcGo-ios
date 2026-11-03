@@ -44,28 +44,53 @@ jobs:
           cargo add day-piece-swiftui
           cd ..
           python3 experiments/day-lab/patch.py
-      - name: Validate Day and build iOS
+      - name: Generate Day UIKit project and check toolchain
         run: |
           cd DayLab
           day doctor --toolkit uikit
           day build -t ios-uikit
-      - name: Collect build outputs
+      - name: Build for physical iPhone (not simulator)
+        run: |
+          set -euo pipefail
+          cd DayLab
+          PROJECT="platform/ios/DayApp.xcodeproj"
+          if [ ! -d "$PROJECT" ]; then
+            echo "::error::Day did not generate the expected UIKit Xcode project."
+            find platform -name '*.xcodeproj' -print
+            exit 1
+          fi
+          echo "Available schemes:"
+          xcodebuild -list -project "$PROJECT"
+          SCHEME=$(xcodebuild -list -json -project "$PROJECT" | python3 -c 'import json,sys; x=json.load(sys.stdin)["project"]["schemes"]; print("DayApp" if "DayApp" in x else x[0])')
+          echo "Building scheme: $SCHEME"
+          xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Debug -destination 'generic/platform=iOS' -sdk iphoneos -derivedDataPath "$RUNNER_TEMP/day-device-build" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee "$GITHUB_WORKSPACE/device-build.log"
+      - name: Package only real iOS device app
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          APP=$(find "$RUNNER_TEMP/day-device-build/Build/Products" -maxdepth 2 -name '*.app' -type d | grep -v iphonesimulator | head -n 1 || true)
+          if [ -z "$APP" ]; then echo "::error::No iphoneos .app produced"; exit 1; fi
+          python3 - "$APP" <<'PY'
+          import plistlib,sys
+          with open(sys.argv[1]+"/Info.plist","rb") as f: info=plistlib.load(f)
+          platforms=info.get("CFBundleSupportedPlatforms",[])
+          print("Supported platforms:", platforms)
+          if "iPhoneOS" not in platforms or "iPhoneSimulator" in platforms:
+              raise SystemExit("Refusing to package simulator binary as device IPA")
+          PY
+          mkdir -p output/Payload
+          cp -R "$APP" output/Payload/
+          (cd output && zip -qry DayLab-iphoneos-unsigned.ipa Payload)
+          rm -rf output/Payload
+      - name: Collect diagnostic logs
         if: always()
         run: |
           mkdir -p output
-          find DayLab -name '*.app' -type d -maxdepth 12 -print > output/app-paths.txt || true
-          while IFS= read -r app; do
-            if [ -d "$app" ]; then
-              mkdir -p output/Payload
-              cp -R "$app" output/Payload/
-              (cd output && zip -qry DayLab-unsigned.ipa Payload)
-              rm -rf output/Payload
-              break
-            fi
-          done < output/app-paths.txt
+          if [ -f device-build.log ]; then cp device-build.log output/device-build.log; fi
+          find DayLab/platform/ios -name '*.xcodeproj' -print > output/projects.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: day-swiftui-build-results
+          name: day-iphoneos-build-results
           path: output/
           if-no-files-found: warn
